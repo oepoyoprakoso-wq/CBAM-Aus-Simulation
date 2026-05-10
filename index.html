@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi CBAM Australia – Klinker & Semen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 0;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1f2e 0%, #16213e 50%, #0f3460 100%);
+    border-bottom: 1px solid #2d3748;
+    padding: 28px 32px 24px;
+  }
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 20px; padding: 4px 12px; font-size: 11px;
+    color: #93c5fd; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .header h1 { font-size: 26px; font-weight: 700; color: #f1f5f9; line-height: 1.2; }
+  .header h1 span { color: #60a5fa; }
+  .header p { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  .formula-box {
+    background: #1a1f2e; border: 1px solid #2d3748;
+    border-left: 3px solid #3b82f6;
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;
+  }
+  .formula-box h3 { font-size: 12px; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-weight: 600; }
+  .formula-main { font-size: 15px; color: #e2e8f0; font-family: 'Courier New', monospace; line-height: 1.8; }
+  .formula-main .var { color: #f59e0b; }
+  .formula-main .op  { color: #a78bfa; }
+  .formula-note { font-size: 12px; color: #64748b; margin-top: 8px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .card {
+    background: #1a1f2e; border: 1px solid #2d3748;
+    border-radius: 12px; padding: 18px;
+  }
+  .card-title { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; margin-bottom: 14px; }
+
+  .ctrl-row { display: flex; flex-direction: column; gap: 12px; }
+  .ctrl-item { display: flex; flex-direction: column; gap: 5px; }
+  .ctrl-label { font-size: 12px; color: #94a3b8; display: flex; justify-content: space-between; }
+  .ctrl-label span { color: #f1f5f9; font-weight: 600; }
+  input[type=range] {
+    width: 100%; height: 4px; border-radius: 2px;
+    -webkit-appearance: none; background: #2d3748; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: #3b82f6; cursor: pointer;
+    border: 2px solid #1a1f2e;
+  }
+  select {
+    width: 100%; background: #0f1117; color: #e2e8f0;
+    border: 1px solid #2d3748; border-radius: 6px; padding: 7px 10px;
+    font-size: 13px; cursor: pointer;
+  }
+
+  .metric-card {
+    background: #1a1f2e; border: 1px solid #2d3748;
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .metric-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+  .metric-value { font-size: 22px; font-weight: 700; color: #f1f5f9; line-height: 1.1; }
+  .metric-sub { font-size: 11px; color: #94a3b8; }
+  .metric-card.highlight { border-color: #3b82f6; background: #1e2a40; }
+  .metric-card.highlight .metric-value { color: #60a5fa; }
+  .metric-card.warn { border-color: #d97706; background: #1e1a10; }
+  .metric-card.warn .metric-value { color: #fbbf24; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #2d3748; padding-bottom: 0; }
+  .tab-btn {
+    padding: 8px 16px; font-size: 13px; font-weight: 500;
+    color: #64748b; background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+    border-radius: 6px 6px 0 0;
+  }
+  .tab-btn.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+  .tab-btn:hover:not(.active) { color: #94a3b8; background: #1a1f2e; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: #0f1117; }
+  thead th { padding: 9px 10px; text-align: right; color: #64748b; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; border-bottom: 1px solid #2d3748; }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid #1e2535; transition: background 0.15s; }
+  tbody tr:hover { background: #1e2535; }
+  tbody td { padding: 8px 10px; text-align: right; color: #cbd5e1; }
+  tbody td:first-child { text-align: left; color: #94a3b8; font-weight: 500; }
+  .td-hl { color: #60a5fa !important; font-weight: 600; }
+  .td-warn { color: #fbbf24 !important; font-weight: 600; }
+  .td-ok { color: #34d399 !important; }
+
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap-tall { position: relative; height: 320px; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .tag-blue { background: rgba(59,130,246,0.15); color: #93c5fd; }
+  .tag-amber { background: rgba(217,119,6,0.15); color: #fcd34d; }
+  .tag-green { background: rgba(52,211,153,0.15); color: #6ee7b7; }
+  .tag-red { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+  .info-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .info-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: #1a1f2e; border: 1px solid #2d3748;
+    border-radius: 20px; padding: 5px 12px; font-size: 12px; color: #94a3b8;
+  }
+  .info-pill strong { color: #e2e8f0; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 12px; color: #94a3b8; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .step-formula {
+    background: #0f1117; border: 1px solid #2d3748; border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 12px; font-family: 'Courier New', monospace;
+    font-size: 13px; line-height: 1.9;
+  }
+  .step-formula .comment { color: #4b5563; font-family: system-ui; font-size: 11px; }
+  .step-num { color: #a78bfa; }
+  .step-eq { color: #e2e8f0; }
+  .step-val { color: #34d399; font-weight: 600; }
+  .step-label { color: #f59e0b; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">🇦🇺 Carbon Border Adjustment Mechanism</div>
+  <h1>Simulasi <span>CBAM Australia</span> — Klinker &amp; Semen</h1>
+  <p>Berbasis Safeguard Mechanism (SM) dengan penurunan benchmark 4,9% per tahun hingga 2030</p>
+  <div style="margin-top:10px; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div style="display:inline-flex; align-items:center; gap:7px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:16px; padding:5px 13px; font-size:11px; color:#fca5a5; font-weight:600; letter-spacing:0.04em;">
+      ⚠ DISCLAIMER: Ini hanya simulasi perkiraan internal — bukan dokumen resmi atau legal
+    </div>
+    <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(100,116,139,0.15); border:1px solid rgba(100,116,139,0.25); border-radius:16px; padding:5px 13px; font-size:11px; color:#94a3b8;">
+      ✉ oepoyo.prakoso@gmail.com
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="formula-box">
+    <h3>Formula CBAM Australia (Proposed – Safeguard Mechanism Mirror)</h3>
+    <div class="formula-main">
+      <span class="var">CBAM Liability</span> <span class="op">=</span>
+      (<span class="var">EI_import</span> <span class="op">−</span> <span class="var">Benchmark_SM(t)</span>)
+      <span class="op">×</span> <span class="var">Volume</span>
+      <span class="op">×</span> <span class="var">Carbon_Price_Gap</span><br>
+      <span class="op">Benchmark_SM(t)</span> <span class="op">=</span>
+      <span class="var">EI_base_2024</span> <span class="op">×</span> (1 <span class="op">−</span> 0.049)<sup>t</sup>
+      <span class="op">&nbsp;← ERC (Emissions Reduction Contribution)</span>
+    </div>
+    <div class="formula-note">
+      Benchmark <strong style="color:#f1f5f9">2024</strong>: Klinker = <strong style="color:#f1f5f9">841 kgCO₂e/t</strong> · Semen = <strong style="color:#f1f5f9">708 kgCO₂e/t</strong> ·
+      Penurunan 4,9%/tahun berlaku mulai <strong style="color:#f1f5f9">2025</strong> · Carbon Price Gap = Harga karbon Australia − Biaya karbon negara asal
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-title">Parameter Produk & Emisi</div>
+      <div class="ctrl-row">
+        <div class="ctrl-item">
+          <div class="ctrl-label">Jenis Produk <span id="lbl-prod">Klinker</span></div>
+          <select id="sel-prod" onchange="update()">
+            <option value="clinker">Klinker (Clinker)</option>
+            <option value="cement">Semen (Cement)</option>
+          </select>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Emisi Intensitas Impor (kgCO₂e/ton)</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="number" id="inp-ei" min="500" max="1200" step="1" value="900"
+              oninput="update()"
+              style="width:100px; background:#0f1117; color:#f1f5f9; border:1px solid #3b82f6;
+                     border-radius:6px; padding:7px 10px; font-size:15px; font-weight:600;
+                     text-align:center;">
+            <span style="font-size:12px; color:#64748b;">kgCO₂e/ton</span>
+            <span style="font-size:11px; color:#475569; margin-left:4px;">
+              (klinker ≈ 820–950 · semen ≈ 650–800)
+            </span>
+          </div>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Volume Impor (ribu ton/tahun) <span id="lbl-vol"></span></div>
+          <input type="range" id="sl-vol" min="100" max="5000" step="50" value="1000" oninput="update()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Parameter Harga Karbon & Skenario</div>
+      <div class="ctrl-row">
+        <div class="ctrl-item">
+          <div class="ctrl-label">Harga Karbon Australia (AUD/tCO₂e) <span id="lbl-aud"></span></div>
+          <input type="range" id="sl-aud" min="30" max="120" step="1" value="40" oninput="update()">
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Biaya Karbon di Negara Asal (AUD/tCO₂e) <span id="lbl-origin-cp"></span></div>
+          <input type="range" id="sl-origin-cp" min="0" max="60" step="0.5" value="2" oninput="update()">
+          <div style="font-size:11px; color:#475569; margin-top:2px;">Contoh: Indonesia ≈ AUD 2–4 · Vietnam ≈ 0 · Jepang ≈ AUD 10–15 · Korea ≈ AUD 13–20</div>
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Kurs AUD/USD <span id="lbl-fx"></span></div>
+          <input type="range" id="sl-fx" min="0.55" max="0.80" step="0.01" value="0.65" oninput="update()">
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Tahun Proyeksi <span id="lbl-yr"></span></div>
+          <input type="range" id="sl-yr" min="2025" max="2035" step="1" value="2027" oninput="update()">
+        </div>
+        <div class="ctrl-item">
+          <div class="ctrl-label">Skenario Benchmark 2023-24</div>
+          <select id="sel-bench" onchange="update()">
+            <option value="best">Best Practice (klinker: 790 · semen: 660 kgCO₂e/t)</option>
+            <option value="default" selected>SM Industry Average 2024 (klinker: 841 · semen: 708 kgCO₂e/t)</option>
+            <option value="facility">Facility-specific (klinker: 880 · semen: 750 kgCO₂e/t)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-4" id="kpi-row"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-sim', this)">📊 Proyeksi Tahunan</button>
+    <button class="tab-btn" onclick="switchTab('tab-formula', this)">🧮 Langkah Formula</button>
+    <button class="tab-btn" onclick="switchTab('tab-chart', this)">📈 Grafik</button>
+    <button class="tab-btn" onclick="switchTab('tab-compare', this)">🌏 Perbandingan Negara</button>
+  </div>
+
+  <div id="tab-sim" class="tab-content active">
+    <div class="card">
+      <div class="card-title">Proyeksi CBAM Liability per Tahun (2024–2035)</div>
+      <div class="table-wrap">
+        <table id="tbl-proj">
+          <thead>
+            <tr>
+              <th style="text-align:left">Tahun</th>
+              <th>ERC Faktor</th>
+              <th>Benchmark SM<br>(kgCO₂e/t)</th>
+              <th>Selisih EI<br>(kgCO₂e/t)</th>
+              <th>CP Gap<br>(AUD/tCO₂e)</th>
+              <th>CBAM/ton<br>(AUD)</th>
+              <th>Total CBAM<br>(AUD juta)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-proj"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-formula" class="tab-content">
+    <div class="card">
+      <div class="card-title">Perhitungan Langkah demi Langkah – Tahun Dipilih</div>
+      <div id="step-detail"></div>
+    </div>
+  </div>
+
+  <div id="tab-chart" class="tab-content">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Tren Benchmark SM vs Emisi Impor (tCO₂e/t)</div>
+      <div class="legend-row" id="lg1"></div>
+      <div class="chart-wrap-tall"><canvas id="chartLine" role="img" aria-label="Tren benchmark SM dan emisi impor"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Total CBAM Liability (AUD juta/tahun)</div>
+      <div class="chart-wrap-tall"><canvas id="chartBar" role="img" aria-label="Total CBAM liability per tahun"></canvas></div>
+    </div>
+  </div>
+
+  <div id="tab-compare" class="tab-content">
+    <div class="card">
+      <div class="card-title">Perbandingan CBAM Liability berdasarkan Negara Asal – Tahun Dipilih</div>
+      <div class="table-wrap" id="tbl-compare"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PRODUCTS = {
+  clinker: {
+    label: 'Klinker',
+    ei_base: { best: 0.790, default: 0.841, facility: 0.880 },
+    ei_import_default: 0.90,
+    ei_import_min: 0.70, ei_import_max: 1.20,
+    bench_label: { best: '0.790 tCO₂e/t (best practice)', default: '0.841 tCO₂e/t (SM 2024)', facility: '0.880 tCO₂e/t (facility-specific)' }
+  },
+  cement: {
+    label: 'Semen',
+    ei_base: { best: 0.660, default: 0.708, facility: 0.750 },
+    ei_import_default: 0.75,
+    ei_import_min: 0.50, ei_import_max: 1.00,
+    bench_label: { best: '0.660 tCO₂e/t (best practice)', default: '0.708 tCO₂e/t (SM 2024)', facility: '0.750 tCO₂e/t (facility-specific)' }
+  }
+};
+
+const DECLINE = 0.049;
+const BASE_YEAR = 2024;
+
+let chartLine = null, chartBar = null;
+
+function getParams() {
+  const prod = PRODUCTS[document.getElementById('sel-prod').value];
+  const bench = document.getElementById('sel-bench').value;
+  const ei_base = prod.ei_base[bench];
+  const ei_import_kg = parseFloat(document.getElementById('inp-ei').value) || 900;
+  const ei_import = ei_import_kg / 1000;
+  const vol = parseFloat(document.getElementById('sl-vol').value) * 1000;
+  const aud = parseFloat(document.getElementById('sl-aud').value);
+  const fx = parseFloat(document.getElementById('sl-fx').value);
+  const yr = parseInt(document.getElementById('sl-yr').value);
+  const origin_cp_aud = parseFloat(document.getElementById('sl-origin-cp').value);
+  return { prod, ei_base, ei_import, ei_import_kg, vol, aud, fx, yr, origin_cp_aud, bench };
+}
+
+function calcRow(year, p) {
+  const t = Math.max(0, year - BASE_YEAR);
+  const erc = Math.pow(1 - DECLINE, t);
+  const benchmark = p.ei_base * erc;
+  const delta = Math.max(0, p.ei_import - benchmark);
+  const cp_gap = Math.max(0, p.aud - p.origin_cp_aud);
+  const cbam_per_ton = delta * cp_gap;
+  const total_cbam = cbam_per_ton * p.vol / 1e6;
+  return { erc, benchmark, delta, cp_gap, cbam_per_ton, total_cbam, t };
+}
+
+function update() {
+  const p = getParams();
+  const prodKey = document.getElementById('sel-prod').value;
+  const pr = PRODUCTS[prodKey];
+
+  document.getElementById('lbl-prod').textContent = pr.label;
+  document.getElementById('lbl-vol').textContent = (p.vol/1000).toFixed(0) + ' kt';
+  document.getElementById('lbl-aud').textContent = 'AUD ' + p.aud.toFixed(0);
+  document.getElementById('lbl-fx').textContent = p.fx.toFixed(2);
+  document.getElementById('lbl-yr').textContent = p.yr;
+  document.getElementById('lbl-origin-cp').textContent = 'AUD ' + p.origin_cp_aud.toFixed(1);
+
+  const row_yr = calcRow(p.yr, p);
+
+  const kpis = document.getElementById('kpi-row');
+  kpis.innerHTML = `
+    <div class="metric-card highlight">
+      <div class="metric-label">CBAM per Ton (Thn ${p.yr})</div>
+      <div class="metric-value">AUD ${row_yr.cbam_per_ton.toFixed(2)}</div>
+      <div class="metric-sub">USD ${(row_yr.cbam_per_ton * p.fx).toFixed(2)}/ton</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Benchmark SM (Thn ${p.yr})</div>
+      <div class="metric-value">${(row_yr.benchmark * 1000).toFixed(1)} kg</div>
+      <div class="metric-sub">CO₂e/t · ERC penurunan ${row_yr.t} thn</div>
+    </div>
+    <div class="metric-card ${row_yr.delta > 0 ? 'warn' : ''}">
+      <div class="metric-label">Selisih Emisi (kgCO₂e/t)</div>
+      <div class="metric-value">${(row_yr.delta * 1000).toFixed(1)}</div>
+      <div class="metric-sub">${row_yr.delta > 0 ? '⚠ Kena CBAM Liability' : '✓ Di bawah benchmark'}</div>
+    </div>
+    <div class="metric-card highlight">
+      <div class="metric-label">Total Liability (${p.yr})</div>
+      <div class="metric-value">AUD ${row_yr.total_cbam.toFixed(2)}M</div>
+      <div class="metric-sub">${(p.vol/1000).toFixed(0)} kt impor/tahun</div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('tbody-proj');
+  let rows = '';
+  const years = [];
+  const benchmarks = [];
+  const totals = [];
+  for (let y = 2024; y <= 2035; y++) {
+    const r = calcRow(y, p);
+    years.push(y);
+    benchmarks.push(r.benchmark);
+    totals.push(r.total_cbam);
+    const cls_delta = r.delta > 0.1 ? 'td-warn' : r.delta > 0 ? 'td-hl' : 'td-ok';
+    const cls_total = r.total_cbam > 10 ? 'td-warn' : r.total_cbam > 0 ? 'td-hl' : 'td-ok';
+    const status = r.delta <= 0 ? '<span class="tag tag-green">Bebas CBAM</span>'
+                 : r.total_cbam > 5  ? '<span class="tag tag-red">Tinggi</span>'
+                 : '<span class="tag tag-amber">Kena CBAM</span>';
+    const hl = y === p.yr ? 'style="background:#1e2a40;"' : '';
+    const ercLabel = y === 2024 ? '100,0% (basis)' : (r.erc*100).toFixed(1) + '%';
+    rows += `<tr ${hl}>
+      <td>${y}${y===p.yr?' ◀':''}</td>
+      <td>${ercLabel}</td>
+      <td>${(r.benchmark * 1000).toFixed(1)} kg</td>
+      <td class="${cls_delta}">${(r.delta * 1000).toFixed(1)} kg</td>
+      <td>${r.cp_gap.toFixed(2)}</td>
+      <td class="${cls_total}">${r.cbam_per_ton.toFixed(2)}</td>
+      <td class="${cls_total}">${r.total_cbam.toFixed(2)}</td>
+      <td>${status}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
+
+  renderSteps(p, row_yr);
+  renderCharts(years, benchmarks, totals, p);
+  renderCompare(p);
+}
+
+function renderSteps(p, r) {
+  const bench_name = { best:'Best Practice', default:'SM Industry Average (2024)', facility:'Facility-specific' }[p.bench];
+  document.getElementById('step-detail').innerHTML = `
+    <div class="step-formula">
+      <span class="comment">// Input Parameter</span><br>
+      <span class="step-label">EI_base_2024 (${bench_name})</span> = <span class="step-val">${(p.ei_base*1000).toFixed(1)} kgCO₂e/t</span> &nbsp;<span class="comment">← Benchmark SM 2024 (klinker: 841 · semen: 708)</span><br>
+      <span class="step-label">EI_import</span> = <span class="step-val">${p.ei_import_kg.toFixed(0)} kgCO₂e/t</span> = ${p.ei_import.toFixed(4)} tCO₂e/t<br>
+      <span class="step-label">Volume Impor</span> = <span class="step-val">${(p.vol/1000).toFixed(0)}</span> ribu ton/tahun<br>
+      <span class="step-label">Harga Karbon AU</span> = <span class="step-val">AUD ${p.aud.toFixed(0)}</span>/tCO₂e<br>
+      <span class="step-label">Biaya Karbon Negara Asal</span> = <span class="step-val">AUD ${p.origin_cp_aud.toFixed(2)}</span>/tCO₂e<br>
+      <span class="step-label">Tahun proyeksi</span> = <span class="step-val">${p.yr}</span> → penurunan t = ${p.yr} − 2024 = <span class="step-val">${r.t}</span> tahun
+      ${r.t === 0 ? '<span class="comment"> ← tahun basis, belum ada penurunan</span>' : ''}
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 1: Hitung ERC (Emissions Reduction Contribution)</span><br>
+      <span class="step-num">ERC</span> = (1 − 0.049)<sup>${r.t}</sup>${r.t === 0 ? ' = 1.00000 (tidak ada penurunan di tahun basis)' : ` = (0.951)<sup>${r.t}</sup> = <span class="step-val">${r.erc.toFixed(5)}</span>`}<br>
+      <span class="comment"> ← penurunan 4,9%/tahun mulai 2025</span>
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 2: Hitung Benchmark SM tahun ${p.yr}</span><br>
+      <span class="step-num">Benchmark_SM(${p.yr})</span> = EI_base_2024 × ERC<br>
+      = ${(p.ei_base*1000).toFixed(1)} × ${r.erc.toFixed(5)}<br>
+      = <span class="step-val">${(r.benchmark*1000).toFixed(2)} kgCO₂e/t</span> &nbsp;<span class="comment">(= ${r.benchmark.toFixed(5)} tCO₂e/t)</span>
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 3: Hitung Selisih Emisi (Emission Delta)</span><br>
+      <span class="step-num">ΔEI</span> = max(0, EI_import − Benchmark_SM)<br>
+      = max(0, ${p.ei_import_kg.toFixed(0)} − ${(r.benchmark*1000).toFixed(2)}) kgCO₂e/t<br>
+      = <span class="step-val">${(r.delta*1000).toFixed(2)} kgCO₂e/t</span> = ${r.delta.toFixed(5)} tCO₂e/t
+      ${r.delta <= 0 ? '<br><span class="comment"> ← Tidak kena CBAM (EI impor sudah lebih rendah dari benchmark)</span>' : ''}
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 4: Hitung Carbon Price Gap</span><br>
+      <span class="step-num">CP_Gap</span> = max(0, Harga_AU − Biaya_Karbon_Asal)<br>
+      = max(0, AUD ${p.aud.toFixed(2)} − AUD ${p.origin_cp_aud.toFixed(2)})<br>
+      = <span class="step-val">AUD ${r.cp_gap.toFixed(2)}</span>/tCO₂e
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 5: CBAM Liability per Ton</span><br>
+      <span class="step-num">CBAM/ton</span> = ΔEI (tCO₂e/t) × CP_Gap<br>
+      = ${r.delta.toFixed(5)} × AUD ${r.cp_gap.toFixed(2)}<br>
+      = <span class="step-val">AUD ${r.cbam_per_ton.toFixed(4)}</span>/ton impor
+    </div>
+    <div class="step-formula">
+      <span class="comment">// Langkah 6: Total CBAM Liability</span><br>
+      <span class="step-num">Total CBAM</span> = CBAM/ton × Volume<br>
+      = AUD ${r.cbam_per_ton.toFixed(4)} × ${(p.vol/1000).toFixed(0)},000 ton<br>
+      = <span class="step-val">AUD ${r.total_cbam.toFixed(3)} juta</span>/tahun
+      ${r.total_cbam > 0 ? `<br><span class="comment"> ≈ USD ${(r.total_cbam * p.fx).toFixed(3)} juta (kurs AUD/USD ${p.fx.toFixed(2)})</span>` : ''}
+    </div>
+  `;
+}
+
+function renderCharts(years, benchmarks, totals, p) {
+  document.getElementById('lg1').innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Benchmark SM (turun 4,9%/thn mulai 2025)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Emisi Intensitas Impor</div>
+  `;
+
+  if (chartLine) chartLine.destroy();
+  const ctx1 = document.getElementById('chartLine').getContext('2d');
+  chartLine = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        {
+          label: 'Benchmark SM (kgCO₂e/t)',
+          data: benchmarks.map(v => parseFloat((v * 1000).toFixed(2))),
+          borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)',
+          fill: true, tension: 0.3, pointRadius: 3
+        },
+        {
+          label: 'Emisi Intensitas Impor',
+          data: years.map(() => p.ei_import_kg),
+          borderColor: '#f59e0b', borderDash: [6,4],
+          backgroundColor: 'transparent', pointRadius: 0, tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e2535' } },
+        y: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e2535' }, title: { display: true, text: 'kgCO₂e/ton', color: '#64748b', font: { size: 11 } } }
+      }
+    }
+  });
+
+  if (chartBar) chartBar.destroy();
+  const ctx2 = document.getElementById('chartBar').getContext('2d');
+  chartBar = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [{
+        label: 'Total CBAM (AUD juta)',
+        data: totals.map(v => parseFloat(v.toFixed(3))),
+        backgroundColor: years.map(y => y === p.yr ? '#f59e0b' : '#3b82f6'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e2535' } },
+        y: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#1e2535' }, title: { display: true, text: 'AUD Juta', color: '#64748b', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderCompare(p) {
+  const r_base = calcRow(p.yr, p);
+  let html = `<div style="font-size:11px;color:#64748b;margin-bottom:10px;">Perbandingan menggunakan estimasi biaya karbon tiap negara asal dalam AUD (berdasarkan kurs AUD/USD ${p.fx.toFixed(2)}). EI Impor & Volume mengikuti slider kiri.</div>
+  <table><thead><tr>
+    <th style="text-align:left">Negara Asal</th>
+    <th>Est. Biaya Karbon (AUD)</th>
+    <th>CP Gap (AUD)</th>
+    <th>CBAM/ton (AUD)</th>
+    <th>Total (AUD juta)</th>
+    <th>vs USD/ton</th>
+    <th>Status</th>
+  </tr></thead><tbody>`;
+
+  const origs = [
+    { label: 'Indonesia',   aud: (3 / p.fx) },
+    { label: 'Vietnam',     aud: 0 },
+    { label: 'Thailand',    aud: (2 / p.fx) },
+    { label: 'Jepang',     aud: (15 / p.fx) },
+    { label: 'Korea Sel.', aud: (20 / p.fx) },
+  ];
+  origs.forEach(o => {
+    const cp_gap = Math.max(0, p.aud - o.aud);
+    const cbam_ton = r_base.delta * cp_gap;
+    const total = cbam_ton * p.vol / 1e6;
+    const usd_ton = cbam_ton * p.fx;
+    const isSelected = Math.abs(o.aud - p.origin_cp_aud) < 1;
+    const status = cbam_ton === 0 ? '<span class="tag tag-green">Bebas</span>'
+                 : cbam_ton > 30 ? '<span class="tag tag-red">Sangat Tinggi</span>'
+                 : cbam_ton > 10 ? '<span class="tag tag-amber">Sedang</span>'
+                 : '<span class="tag tag-blue">Rendah</span>';
+    html += `<tr>
+      <td>${o.label}</td>
+      <td>AUD ${o.aud.toFixed(2)}</td>
+      <td class="${cp_gap > 30 ? 'td-warn' : ''}">${cp_gap.toFixed(2)}</td>
+      <td class="${cbam_ton > 0 ? 'td-hl' : 'td-ok'}">${cbam_ton.toFixed(2)}</td>
+      <td class="${total > 5 ? 'td-warn' : cbam_ton > 0 ? 'td-hl' : 'td-ok'}">${total.toFixed(2)}</td>
+      <td>${usd_ton.toFixed(2)}</td>
+      <td>${status}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('tbl-compare').innerHTML = html;
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+update();
+</script>
+</body>
+</html>
